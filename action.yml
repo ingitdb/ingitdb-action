@@ -41,6 +41,8 @@ runs:
 
         TAG=$(curl -fsSL "$API_URL" | jq -r '.tag_name')
 
+        VERSION="${TAG#v}"   # removes leading 'v' if present
+
         if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
           echo "Failed to determine latest ingitdb release"
           exit 1
@@ -50,7 +52,7 @@ runs:
         echo "Detected OS: $OS"
         echo "Detected ARCH: $ARCH"
 
-        ARCHIVE="ingitdb_${TAG}_${OS}_${ARCH}.tar.gz"
+        ARCHIVE="ingitdb_${VERSION}_${OS}_${ARCH}.tar.gz"
         URL="https://github.com/ingitdb/ingitdb-go/releases/download/${TAG}/${ARCHIVE}"
 
         echo "Attempting to download:"
