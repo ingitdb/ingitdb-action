@@ -1,0 +1,61 @@
+name: ingitdb
+description: Run ingitdb (versioned database based on Git) on your repository
+author: ingitdb
+
+inputs:
+  args:
+    description: Arguments to pass to ingitdb
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Detect OS and architecture
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        OS="$(uname | tr '[:upper:]' '[:lower:]')"
+        ARCH="$(uname -m)"
+
+        case "$ARCH" in
+          x86_64) ARCH=amd64 ;;
+          aarch64|arm64) ARCH=arm64 ;;
+          *)
+            echo "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+        esac
+
+        echo "OS=$OS" >> "$GITHUB_ENV"
+        echo "ARCH=$ARCH" >> "$GITHUB_ENV"
+
+    - name: Download latest ingitdb release
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        API_URL="https://api.github.com/repos/ingitdb/ingitdb-go/releases/latest"
+        TAG=$(curl -fsSL "$API_URL" | jq -r '.tag_name')
+
+        if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+          echo "Failed to determine latest ingitdb release"
+          exit 1
+        fi
+
+        echo "Using ingitdb version $TAG"
+
+        ARCHIVE="ingitdb_${TAG}_${OS}_${ARCH}.tar.gz"
+        URL="https://github.com/ingitdb/ingitdb-go/releases/download/${TAG}/${ARCHIVE}"
+
+        curl -fsSL "$URL" | tar xz
+        chmod +x ingitdb
+
+        echo "$PWD" >> "$GITHUB_PATH"
+
+    - name: Run ingitdb
+      shell: bash
+      run: |
+        set -euo pipefail
+        ingitdb ${{ inputs.args }}
