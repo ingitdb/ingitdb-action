@@ -37,6 +37,8 @@ runs:
         set -euo pipefail
 
         API_URL="https://api.github.com/repos/ingitdb/ingitdb-go/releases/latest"
+        echo "Fetching latest release from: $API_URL"
+
         TAG=$(curl -fsSL "$API_URL" | jq -r '.tag_name')
 
         if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
@@ -44,12 +46,17 @@ runs:
           exit 1
         fi
 
-        echo "Using ingitdb version $TAG"
+        echo "Using ingitdb version: $TAG"
+        echo "Detected OS: $OS"
+        echo "Detected ARCH: $ARCH"
 
         ARCHIVE="ingitdb_${TAG}_${OS}_${ARCH}.tar.gz"
         URL="https://github.com/ingitdb/ingitdb-go/releases/download/${TAG}/${ARCHIVE}"
 
-        curl -fsSL "$URL" | tar xz
+        echo "Attempting to download:"
+        echo "$URL"
+
+        curl -fL "$URL" | tar xz
         chmod +x ingitdb
 
         echo "$PWD" >> "$GITHUB_PATH"
