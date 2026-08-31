@@ -1,0 +1,21 @@
+titles:
+  en: Tasks
+
+record_file:
+  name: "{key}.json"
+  type: "map[string]any"
+  format: json
+
+columns:
+  title:
+    type: string
+    required: true
+    max_length: 100
+  status:
+    type: string
+    required: true
+    foreign_key: statuses
+
+columns_order:
+  - title
+  - status

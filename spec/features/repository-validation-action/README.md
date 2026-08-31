@@ -45,7 +45,8 @@ validator's data findings.
 4. Valid data produces a successful check and records the validator identity.
    Invalid data produces a failing check with findings. Unsupported runners,
    missing checksums, download failures, and CLI crashes fail distinctly and
-   MUST NOT be reported as invalid repository data.
+   MUST NOT be reported as invalid repository data. Unexpected action failures
+   also emit a stable infrastructure category.
 
 ### Reproducible tool acquisition
 
@@ -72,6 +73,13 @@ mismatched checksums MUST fail the action.
 The archive and executable MUST be placed in runner-temporary storage outside
 the checked-out repository. Running validation MUST leave the Git working tree
 unchanged.
+
+#### REQ: safe-archive-extraction
+
+Before extraction, the action MUST reject absolute, parent-traversing,
+unexpected, duplicate-executable, symlink, and hardlink archive members. It
+MUST extract only one regular `ingitdb` executable inside runner-temporary
+storage and MUST NOT follow an archive member outside that directory.
 
 #### REQ: supported-runner-matrix
 
@@ -171,6 +179,14 @@ for a newer commit.
 **When** acquisition completes
 **Then** the action fails before extraction/execution and identifies checksum verification as the terminal category
 
+### AC: unsafe-archive-member-never-escapes-temporary-storage (verifies REQ:safe-archive-extraction, REQ:temporary-tool-directory)
+
+**Given** a checksum-valid fixture archive contains a symlink, hardlink,
+absolute path, parent traversal, unexpected member, or duplicate executable
+**When** acquisition completes
+**Then** the action fails in the extraction category before executing the CLI
+or writing outside runner-temporary storage
+
 ### AC: unsupported-runner-fails-actionably (verifies REQ:supported-runner-matrix, REQ:distinguish-data-and-infrastructure-failure)
 
 **Given** the action runs on an operating-system/architecture pair outside its tested matrix
@@ -219,6 +235,25 @@ for a newer commit.
   checksums for each supported exact release.
 - The selected CLI release owns validation semantics and exit-code categories;
   this action faithfully transports them and does not reimplement validation.
+
+## Implementation
+
+- [`action.yml`](../../../action.yml) defines the structured composite-action
+  contract and stable outputs.
+- [`scripts/validate.sh`](../../../scripts/validate.sh) validates inputs,
+  acquires and verifies the CLI, contains extraction, runs full-root validation,
+  suppresses untrusted workflow-command interpretation, and emits terminal
+  metadata.
+- [`test/validate_test.sh`](../../../test/validate_test.sh) exercises success,
+  invalid data, input injection, unsupported runners, acquisition/checksum,
+  unsafe archives, path escape, output safety, and validator-runtime failures.
+- [`test/fixtures/valid`](../../../test/fixtures/valid) and
+  [`test/fixtures/invalid-cross-collection`](../../../test/fixtures/invalid-cross-collection)
+  exercise the published CLI against both a complete valid repository and a
+  broken foreign-key reference between collections.
+- [`.github/workflows/test.yml`](../../../.github/workflows/test.yml) runs the
+  contract tests and both real-repository fixtures on the exercised
+  GitHub-hosted Ubuntu runner.
 
 ## Open Questions
 

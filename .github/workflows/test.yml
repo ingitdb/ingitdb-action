@@ -1,0 +1,53 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Exercise immutable repository validation contract
+        run: bash test/validate_test.sh
+      - name: Validate a real repository with the published CLI
+        id: valid_repository
+        uses: ./
+        with:
+          cli-version: v0.65.13
+          database-root: test/fixtures/valid
+      - name: Assert the real validation receipt
+        env:
+          TERMINAL_CATEGORY: ${{ steps.valid_repository.outputs.terminal-category }}
+          VALIDATED_ROOT: ${{ steps.valid_repository.outputs.database-root }}
+          VALIDATED_VERSION: ${{ steps.valid_repository.outputs.cli-version }}
+        run: |
+          test "$TERMINAL_CATEGORY" = success
+          test "$VALIDATED_ROOT" = test/fixtures/valid
+          test "$VALIDATED_VERSION" = v0.65.13
+          test -z "$(git status --porcelain)"
+      - name: Reject a broken cross-collection reference
+        id: invalid_repository
+        continue-on-error: true
+        uses: ./
+        with:
+          cli-version: v0.65.13
+          database-root: test/fixtures/invalid-cross-collection
+      - name: Assert the invalid repository failed validation
+        env:
+          INVALID_OUTCOME: ${{ steps.invalid_repository.outcome }}
+        run: |
+          test "$INVALID_OUTCOME" = failure
+          test -z "$(git status --porcelain)"
