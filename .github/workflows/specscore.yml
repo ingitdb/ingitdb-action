@@ -1,0 +1,36 @@
+name: SpecScore lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: specscore-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install pinned SpecScore CLI
+        env:
+          SPECSCORE_VERSION: 0.37.6
+          SPECSCORE_SHA256: 32c9c8707dc6c46c664105cff5cefcb8f72c1b6148b7b2d18de2f96f719fbe58
+        run: |
+          set -euo pipefail
+          archive="specscore_${SPECSCORE_VERSION}_linux_amd64.tar.gz"
+          url="https://github.com/specscore/specscore-cli/releases/download/v${SPECSCORE_VERSION}/${archive}"
+          curl --fail --silent --show-error --location "${url}" --output "/tmp/${archive}"
+          echo "${SPECSCORE_SHA256}  /tmp/${archive}" | sha256sum --check --strict
+          tar --extract --gzip --file "/tmp/${archive}" --directory /tmp specscore
+          /tmp/specscore version
+      - name: Lint SpecScore tree
+        run: /tmp/specscore spec lint
