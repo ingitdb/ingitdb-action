@@ -1,70 +1,47 @@
-name: ingitdb
-description: Run ingitdb (versioned database based on Git) on your repository
+name: InGitDB repository validation
+description: Validate a complete InGitDB repository with an exact, checksum-verified InGitDB CLI release
 author: ingitdb
 
 inputs:
-  args:
-    description: Arguments to pass to ingitdb
+  cli-version:
+    description: Exact ingitdb/ingitdb-cli release tag, for example v0.65.13
+    required: true
+  database-root:
+    description: Repository-relative root of the InGitDB database
     required: false
-    default: ""
+    default: .
+
+outputs:
+  terminal-category:
+    description: Stable result category such as success, invalid_data, checksum_error, or validator_error
+    value: ${{ steps.validate.outputs.terminal_category }}
+  cli-version:
+    description: Exact InGitDB CLI release tag used for validation
+    value: ${{ steps.validate.outputs.cli_version }}
+  database-root:
+    description: Canonical repository-relative database root that was validated
+    value: ${{ steps.validate.outputs.database_root }}
+  validated-commit:
+    description: Git commit supplied by the calling workflow
+    value: ${{ steps.validate.outputs.validated_commit }}
+  action-revision:
+    description: Immutable action ref supplied by GitHub Actions
+    value: ${{ steps.validate.outputs.action_revision }}
+  started-at:
+    description: UTC validation start time
+    value: ${{ steps.validate.outputs.started_at }}
+  completed-at:
+    description: UTC validation completion time
+    value: ${{ steps.validate.outputs.completed_at }}
 
 runs:
   using: composite
   steps:
-    - name: Detect OS and architecture
+    - id: validate
+      name: Validate complete repository
       shell: bash
-      run: |
-        set -euo pipefail
-
-        OS="$(uname | tr '[:upper:]' '[:lower:]')"
-        ARCH="$(uname -m)"
-
-        case "$ARCH" in
-          x86_64) ARCH=amd64 ;;
-          aarch64|arm64) ARCH=arm64 ;;
-          *)
-            echo "Unsupported architecture: $ARCH"
-            exit 1
-            ;;
-        esac
-
-        echo "OS=$OS" >> "$GITHUB_ENV"
-        echo "ARCH=$ARCH" >> "$GITHUB_ENV"
-
-    - name: Download latest ingitdb release
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        API_URL="https://api.github.com/repos/ingitdb/ingitdb-go/releases/latest"
-        echo "Fetching latest release from: $API_URL"
-
-        TAG=$(curl -fsSL "$API_URL" | jq -r '.tag_name')
-
-        VERSION="${TAG#v}"   # removes leading 'v' if present
-
-        if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-          echo "Failed to determine latest ingitdb release"
-          exit 1
-        fi
-
-        echo "Using ingitdb version: $TAG"
-        echo "Detected OS: $OS"
-        echo "Detected ARCH: $ARCH"
-
-        ARCHIVE="ingitdb_${VERSION}_${OS}_${ARCH}.tar.gz"
-        URL="https://github.com/ingitdb/ingitdb-go/releases/download/${TAG}/${ARCHIVE}"
-
-        echo "Attempting to download:"
-        echo "$URL"
-
-        curl -fL "$URL" | tar xz
-        chmod +x ingitdb
-
-        echo "$PWD" >> "$GITHUB_PATH"
-
-    - name: Run ingitdb
-      shell: bash
-      run: |
-        set -euo pipefail
-        ingitdb ${{ inputs.args }}
+      env:
+        INPUT_CLI_VERSION: ${{ inputs.cli-version }}
+        INPUT_DATABASE_ROOT: ${{ inputs.database-root }}
+        INGITDB_ACTION_REF: ${{ github.action_ref }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/validate.sh"
