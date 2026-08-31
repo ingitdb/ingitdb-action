@@ -247,8 +247,13 @@ or writing outside runner-temporary storage
 - [`test/validate_test.sh`](../../../test/validate_test.sh) exercises success,
   invalid data, input injection, unsupported runners, acquisition/checksum,
   unsafe archives, path escape, output safety, and validator-runtime failures.
+- [`test/fixtures/valid`](../../../test/fixtures/valid) and
+  [`test/fixtures/invalid-cross-collection`](../../../test/fixtures/invalid-cross-collection)
+  exercise the published CLI against both a complete valid repository and a
+  broken foreign-key reference between collections.
 - [`.github/workflows/test.yml`](../../../.github/workflows/test.yml) runs the
-  contract tests on the exercised GitHub-hosted Ubuntu runner.
+  contract tests and both real-repository fixtures on the exercised
+  GitHub-hosted Ubuntu runner.
 
 ## Open Questions
 
