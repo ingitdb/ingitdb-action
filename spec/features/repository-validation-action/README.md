@@ -254,6 +254,9 @@ or writing outside runner-temporary storage
 - [`.github/workflows/test.yml`](../../../.github/workflows/test.yml) runs the
   contract tests and both real-repository fixtures on the exercised
   GitHub-hosted Ubuntu runner.
+- [`.github/workflows/reference-ingitdb-validation.yml`](../../../.github/workflows/reference-ingitdb-validation.yml)
+  is the copyable least-privilege workflow and consumes the first landed
+  Action revision by its full immutable commit SHA.
 
 ## Open Questions
 
